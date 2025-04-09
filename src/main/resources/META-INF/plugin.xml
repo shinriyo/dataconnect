@@ -1,14 +1,9 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
-    <id>com.dataconnect.firebase</id>
-
-    <!-- Public plugin name should be written in Title Case.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>GraphQL to Dart Generator</name>
-
-    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor>DataConnect</vendor>
+    <id>com.shinriyo.dataconnect</id>
+    <name>Firebase Data Connect for Android Studio</name>
+    <vendor email="shinriyo@gmail.com" url="https://shinriyo.hateblo.jp/">shinriyo</vendor>
+    <version>0.0.1</version>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
@@ -24,19 +19,25 @@
     </ul>
     ]]></description>
 
-    <!-- Product and plugin compatibility requirements.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
-    <depends>com.intellij.modules.platform</depends>
-    <depends>com.intellij.modules.androidstudio</depends>
+    <depends>com.intellij.modules.lang</depends>
 
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <applicationListeners>
+        <listener class="com.shinriyo.dataconnect.PluginStartup" topic="com.intellij.openapi.startup.StartupActivity"/>
+    </applicationListeners>
+
     <extensions defaultExtensionNs="com.intellij">
+        <startupActivity implementation="com.shinriyo.dataconnect.PluginStartup" />
         <toolWindow id="GraphQL Generator" 
                    secondary="true" 
                    icon="AllIcons.General.Modified" 
                    anchor="bottom"
-                   factoryClass="com.dataconnect.firebase.window.GraphQLGeneratorToolWindowFactory"/>
+                   factoryClass="com.shinriyo.dataconnect.window.GraphQLGeneratorToolWindowFactory"/>
+                   
+        <notificationGroup id="Firebase Data Connect" 
+                          displayType="BALLOON" 
+                          isLogByDefault="true"/>
     </extensions>
 
     <actions>
@@ -46,7 +47,7 @@
             <add-to-group group-id="ToolsMenu" relative-to-action="HelpMenu" anchor="before"/>
             
             <action id="GraphQL.Generator.Generate" 
-                    class="com.dataconnect.firebase.actions.GenerateAction" 
+                    class="com.shinriyo.dataconnect.actions.GenerateAction" 
                     text="Generate Dart Code" 
                     description="Generate Dart code from GraphQL schema"/>
         </group>
