@@ -12,7 +12,7 @@ import java.io.File
 
 class GqlSaveListener : BulkFileListener {
     private val log = Logger.getInstance(GqlSaveListener::class.java)
-    private val NOTIFICATION_GROUP_ID = "Firebase Data Connect"
+    private val notificationGroupId = "Firebase Data Connect"
 
     override fun after(events: MutableList<out VFileEvent>) {
         for (event in events) {
@@ -57,7 +57,7 @@ class GqlSaveListener : BulkFileListener {
 
     private fun notify(project: Project, content: String) {
         val notification = Notification(
-            NOTIFICATION_GROUP_ID,
+            notificationGroupId,
             "GraphQL to Dart Generator",
             content,
             NotificationType.INFORMATION

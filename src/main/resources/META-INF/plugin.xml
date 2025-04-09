@@ -29,11 +29,6 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <startupActivity implementation="com.shinriyo.dataconnect.PluginStartup" />
-        <toolWindow id="GraphQL Generator" 
-                   secondary="true" 
-                   icon="AllIcons.General.Modified" 
-                   anchor="bottom"
-                   factoryClass="com.shinriyo.dataconnect.window.GraphQLGeneratorToolWindowFactory"/>
                    
         <notificationGroup id="Firebase Data Connect" 
                           displayType="BALLOON" 
@@ -45,11 +40,6 @@
                text="GraphQL Generator" 
                description="GraphQL to Dart code generation actions">
             <add-to-group group-id="ToolsMenu" relative-to-action="HelpMenu" anchor="before"/>
-            
-            <action id="GraphQL.Generator.Generate" 
-                    class="com.shinriyo.dataconnect.actions.GenerateAction" 
-                    text="Generate Dart Code" 
-                    description="Generate Dart code from GraphQL schema"/>
         </group>
     </actions>
 </idea-plugin>
