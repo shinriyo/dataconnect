@@ -1,30 +1,54 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
-    <id>com.shinriyo.dataconnect</id>
+    <id>com.dataconnect.firebase</id>
 
     <!-- Public plugin name should be written in Title Case.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>Dataconnect</name>
+    <name>GraphQL to Dart Generator</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor email="support@yourcompany.com" url="https://www.yourcompany.com">YourCompany</vendor>
+    <vendor>DataConnect</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
-  ]]></description>
+    A powerful tool for Android Studio that automatically generates Dart code from your GraphQL schema and queries.
+    
+    <h3>Features:</h3>
+    <ul>
+        <li>Generate Dart models from GraphQL schema</li>
+        <li>Auto-complete for GraphQL queries</li>
+        <li>Type-safe code generation</li>
+    </ul>
+    ]]></description>
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.androidstudio</depends>
 
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-
+        <toolWindow id="GraphQL Generator" 
+                   secondary="true" 
+                   icon="AllIcons.General.Modified" 
+                   anchor="bottom"
+                   factoryClass="com.dataconnect.firebase.window.GraphQLGeneratorToolWindowFactory"/>
     </extensions>
+
+    <actions>
+        <group id="GraphQL.Generator.TopMenu" 
+               text="GraphQL Generator" 
+               description="GraphQL to Dart code generation actions">
+            <add-to-group group-id="ToolsMenu" relative-to-action="HelpMenu" anchor="before"/>
+            
+            <action id="GraphQL.Generator.Generate" 
+                    class="com.dataconnect.firebase.actions.GenerateAction" 
+                    text="Generate Dart Code" 
+                    description="Generate Dart code from GraphQL schema"/>
+        </group>
+    </actions>
 </idea-plugin>
