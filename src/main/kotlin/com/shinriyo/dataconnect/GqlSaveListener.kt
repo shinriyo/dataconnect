@@ -233,6 +233,28 @@ class GqlSaveListener : BulkFileListener {
         
         try {
             val content = graphqlFile.readText()
+
+            // Handle schema files
+            if (graphqlFile.name == "schema.gql" || content.contains("type") && content.contains("@table")) {
+                log.info("Processing schema file: ${graphqlFile.name}")
+                val typeDefinitions = parser.parseSchema(content)
+                
+                // Generate Dart files for each type definition
+                for (typeDef in typeDefinitions) {
+                    if (typeDef.isTable) {
+                        val dartFileName = "${typeDef.name.lowercase(Locale.getDefault())}.dart"
+                        val dartFile = File(outputDir, dartFileName)
+                        
+                        val dartContent = generateDartContentFromType(typeDef)
+                        dartFile.writeText(dartContent)
+                        
+                        log.info("Generated Dart file for type ${typeDef.name}: ${dartFile.absolutePath}")
+                    }
+                }
+                return true
+            }
+
+            // Handle operation files
             val operation = parser.parse(content)
             
             if (operation == null) {
@@ -256,6 +278,53 @@ class GqlSaveListener : BulkFileListener {
         }
     }
     
+    private fun generateDartContentFromType(typeDef: TypeDefinition): String {
+        val className = typeDef.name
+        val sb = StringBuilder()
+        sb.append("part of 'default_connector.dart';\n\n")
+        
+        // Generate class
+        sb.append("class $className {\n")
+        
+        // Add fields
+        for (field in typeDef.fields) {
+            val dartType = mapGraphQLTypeToDartType(field.type)
+            val snakeCaseFieldName = field.name.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase(Locale.getDefault())
+            sb.append("  $dartType ${snakeCaseFieldName};\n")
+        }
+        
+        // Add fromJson method
+        sb.append("\n  $className.fromJson(dynamic json):\n")
+        for (field in typeDef.fields) {
+            val dartType = mapGraphQLTypeToDartType(field.type)
+            val snakeCaseFieldName = field.name.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase(Locale.getDefault())
+            sb.append("  ${snakeCaseFieldName} = nativeFromJson<$dartType>(json['${snakeCaseFieldName}']);\n")
+        }
+        
+        // Add toJson method
+        sb.append("\n  Map<String, dynamic> toJson() {\n")
+        sb.append("    Map<String, dynamic> json = {};\n")
+        for (field in typeDef.fields) {
+            val dartType = mapGraphQLTypeToDartType(field.type)
+            val snakeCaseFieldName = field.name.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase(Locale.getDefault())
+            sb.append("    json['${snakeCaseFieldName}'] = nativeToJson<$dartType>(${snakeCaseFieldName});\n")
+        }
+        sb.append("    return json;\n")
+        sb.append("  }\n\n")
+        
+        // Add constructor
+        sb.append("  $className({\n")
+        for (field in typeDef.fields) {
+            val snakeCaseFieldName = field.name.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase(Locale.getDefault())
+            sb.append("    required this.${snakeCaseFieldName},\n")
+        }
+        sb.append("  });\n")
+        
+        sb.append("}\n")
+        
+        return sb.toString()
+    }
+    
     private fun generateDartContent(operation: Operation): String {
         val className = operation.name.capitalize()
         val dataClassName = "${className}Data"
@@ -264,6 +333,53 @@ class GqlSaveListener : BulkFileListener {
         
         val sb = StringBuilder()
         sb.append("part of 'default_connector.dart';\n\n")
+        
+        // Generate nested field classes first
+        for (field in operation.fields) {
+            val nestedFields = parser.getNestedFields(field.type)
+            if (nestedFields != null) {
+                val fieldClassName = field.type
+                
+                // Add field class
+                sb.append("class $fieldClassName {\n")
+                
+                // Add fields
+                for (nestedField in nestedFields) {
+                    val dartType = mapGraphQLTypeToDartType(nestedField.type)
+                    val snakeCaseFieldName = nestedField.name.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase(Locale.getDefault())
+                    sb.append("  $dartType ${snakeCaseFieldName};\n")
+                }
+                
+                // Add fromJson method
+                sb.append("\n  $fieldClassName.fromJson(dynamic json):\n")
+                for (nestedField in nestedFields) {
+                    val dartType = mapGraphQLTypeToDartType(nestedField.type)
+                    val snakeCaseFieldName = nestedField.name.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase(Locale.getDefault())
+                    sb.append("  ${snakeCaseFieldName} = nativeFromJson<$dartType>(json['${snakeCaseFieldName}']);\n")
+                }
+                
+                // Add toJson method
+                sb.append("\n  Map<String, dynamic> toJson() {\n")
+                sb.append("    Map<String, dynamic> json = {};\n")
+                for (nestedField in nestedFields) {
+                    val dartType = mapGraphQLTypeToDartType(nestedField.type)
+                    val snakeCaseFieldName = nestedField.name.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase(Locale.getDefault())
+                    sb.append("    json['${snakeCaseFieldName}'] = nativeToJson<$dartType>(${snakeCaseFieldName});\n")
+                }
+                sb.append("    return json;\n")
+                sb.append("  }\n\n")
+                
+                // Add constructor
+                sb.append("  $fieldClassName({\n")
+                for (nestedField in nestedFields) {
+                    val snakeCaseFieldName = nestedField.name.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase(Locale.getDefault())
+                    sb.append("    required this.${snakeCaseFieldName},\n")
+                }
+                sb.append("  });\n")
+                
+                sb.append("}\n\n")
+            }
+        }
         
         // Generate VariablesBuilder class
         sb.append("class $builderClassName {\n")
@@ -305,51 +421,20 @@ class GqlSaveListener : BulkFileListener {
         
         sb.append("}\n\n")
         
-        // Generate field classes
-        for (field in operation.fields) {
-            val fieldClassName = "${className}${field.name.capitalize()}"
-            
-            // Add field class
-            sb.append("class $fieldClassName {\n")
-            
-            // Add fields (assuming uid field for now)
-            sb.append("  String uid;\n")
-            
-            // Add fromJson method
-            sb.append("  $fieldClassName.fromJson(dynamic json):\n")
-            sb.append("  uid = nativeFromJson<String>(json['uid']);\n\n")
-            
-            // Add toJson method
-            sb.append("  Map<String, dynamic> toJson() {\n")
-            sb.append("    Map<String, dynamic> json = {};\n")
-            sb.append("    json['uid'] = nativeToJson<String>(uid);\n")
-            sb.append("    return json;\n")
-            sb.append("  }\n\n")
-            
-            // Add constructor
-            sb.append("  $fieldClassName({\n")
-            sb.append("    required this.uid,\n")
-            sb.append("  });\n")
-            
-            sb.append("}\n\n")
-        }
-        
         // Generate Data class
         sb.append("class $dataClassName {\n")
         
         // Add fields with snake_case
         for (field in operation.fields) {
-            val fieldClassName = "${className}${field.name.capitalize()}"
             val snakeCaseFieldName = field.name.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase(Locale.getDefault())
-            sb.append("  $fieldClassName ${snakeCaseFieldName};\n")
+            sb.append("  ${field.type} ${snakeCaseFieldName};\n")
         }
         
         // Add fromJson method
         sb.append("  $dataClassName.fromJson(dynamic json):\n")
         for (field in operation.fields) {
-            val fieldClassName = "${className}${field.name.capitalize()}"
             val snakeCaseFieldName = field.name.replace(Regex("([a-z])([A-Z])"), "$1_$2").lowercase(Locale.getDefault())
-            sb.append("  ${snakeCaseFieldName} = $fieldClassName.fromJson(json['${snakeCaseFieldName}']);\n")
+            sb.append("  ${snakeCaseFieldName} = ${field.type}.fromJson(json['${snakeCaseFieldName}']);\n")
         }
         
         // Add toJson method
